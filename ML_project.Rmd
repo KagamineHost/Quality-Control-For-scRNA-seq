@@ -1,0 +1,135 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r}
+#install.packages('dplyr')
+#install.packages('Seurat', repos = "http://cran.us.r-project.org")
+#install.packages('patchwork', repos = "http://cran.us.r-project.org")
+
+
+```
+
+
+```{r}
+library(dplyr)
+# retrieve subset data
+counts_exon <- read.csv("mouse_VISp_2018_exon-matrix.csv")
+counts_intron <- read.csv("mouse_VISp_2018_intron-matrix.csv")
+sample_info <- read.csv("mouse_VISp_2018_samples-columns.csv")
+```
+
+# filter for only GABAergic cells
+
+
+```{r}
+# need to make first row as index to for next functions to work
+rownames(counts_exon) <- counts_exon[,1]
+counts_exon <- counts_exon[,-1]
+```
+
+
+# SEURAT
+
+```{r}
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(ggplot2)
+```
+
+```{r}
+# create seurat object
+exon_seurat <- CreateSeuratObject(counts = counts_exon, project = "Tasic_exon", min.cells = 3, min.features = 200)
+```
+
+1. Selection and filtration of cells based on QC metrics, data normalization and scaling, and the detection of highly variable features
+```{r}
+# Getting rid of mitochondrial genes
+exon_seurat[["percent.mt"]] <- PercentageFeatureSet(exon_seurat, pattern = "^MT-") # calculates the percentage of counts originating from mitochondria features
+head(exon_seurat@meta.data)
+```
+
+```{r}
+VlnPlot(exon_seurat, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3, sort = TRUE)
+
+plot1 <- FeatureScatter(exon_seurat, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(exon_seurat, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1 + plot2
+```
+```{r}
+exon_seurat <- subset(exon_seurat, subset = nFeature_RNA > 2000 & nFeature_RNA < 15000 & percent.mt < 5) 
+
+```
+
+
+2. Normalizing data after removing unwanted cells from the dataset
+```{r}
+#  global-scaling normalization method 
+exon_seurat <- NormalizeData(exon_seurat, normalization.method = "LogNormalize", scale.factor = 10000)
+```
+3. Identifying highly variable features/genes
+```{r fig.height = 3, fig.width = 9}
+# First plot mean-variance of each gene across all cells
+#exon_seurat1 <- FindVariableFeatures(exon_seurat,selection.method = "vst", nfeatures = 2000 ) 
+exon_seurat <- FindVariableFeatures(exon_seurat,selection.method = "mean.var.plot") 
+# how to know if 2000 is good? look at variance of all genes and see when it apers off. Calculate variance across geen. using seurat object
+
+# plot variable features with and without labels
+plot1 <- VariableFeaturePlot(exon_seurat)
+#plot3 <- VariableFeaturePlot(exon_seurat1)
+#plot2 <- LabelPoints(plot = plot1, points = top1000, repel = TRUE, xnudge = 0, ynudge = 0) 
+#plot2
+plot1
+
+
+```
+
+
+4. Selecting highly variable genes
+```{r}
+# Identify the 1000 most highly variable genes - play around later
+top1000 <- head(VariableFeatures(exon_seurat), 1000)
+```
+
+
+
+5. Scale genes 
+```{r}
+all.genes <- rownames(exon_seurat)
+exon_seurat <- ScaleData(exon_seurat, features = all.genes)
+```
+
+5. Linear dimensionality reduction for HVGs
+```{r}
+exon_seurat <- RunPCA(exon_seurat, features = VariableFeatures(object = exon_seurat), npcs = 100)
+```
+
+# Seurat provides several useful ways of visualizing both cells and features that define the PCA, including VizDimReduction(), DimPlot(), and DimHeatmap()
+```{r fig.height = 4, fig.width = 8}
+# Examine and visualize PCA results a few different ways
+print(exon_seurat[["pca"]], dims = 1:5, nfeatures = 5)
+
+VizDimLoadings(exon_seurat, dims = 1:2, reduction = "pca")
+
+DimPlot(exon_seurat, reduction = "pca")
+```
+
+```{r}
+DimHeatmap(exon_seurat, dims = 1, cells = 500, balanced = TRUE) # only PCA 1
+
+DimHeatmap(exon_seurat, dims = 1:10, cells = 500, balanced = TRUE)
+# imporatnacce of the variance gene to the PC
+```
+```{r}
+ElbowPlot(exon_seurat, ndims = 100)
+```
+
+
+
+
+

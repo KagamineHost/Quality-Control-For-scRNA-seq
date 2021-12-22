@@ -1,0 +1,106 @@
+---
+title: "1213_makeup_mixcells_yagi"
+author: "Yagi"
+date: "2021/12/13"
+output: html_document
+---
+
+```{r}
+rm(list = ls())
+
+```
+
+```{r}
+# feature_load <- read.csv("pca_featureloadings.csv", sep = " ")
+cell_embed <- read.csv("pca_cellembeddings.csv", sep = " ")
+cell_label <- read.csv("1211_celltype_label.csv", check.names = F)
+colnames(cell_label) <- c('cell_ids', 'cell_type')
+
+```
+\
+According to my D:/Yagi/R/2021fall_ml/project/1103_data_processing.Rmd \
+Lamp5 1122
+Meis2 45
+Pvalb 1337
+Serpinf1 27
+Sncg 125
+Sst 1741
+Vip 1728
+\
+And I plan to mix some cells by column mean
+```{r}
+# mix_lamp5_pvalb <- cell_embed[c(which(cell_label$cell_type == 'Lamp5'), which(cell_label$cell_type == "Pvalb")),]
+# psudo_cell_lamp5_pvalb <- apply(mix_lamp5_pvalb, 2, mean)
+
+# define a function
+mix_cells <- function(type_1, type_2) {
+  mix_frame <- cell_embed[c(which(cell_label$cell_type == type_1), 
+                            which(cell_label$cell_type == type_2)),]
+  mix_cells <- apply(mix_frame, 2, mean)
+}
+
+mixcell_lamp5_meis2 <- mix_cells("Lamp5", "Meis2")
+mixcell_lamp5_pvalb <- mix_cells("Lamp5", "Pvalb")
+mixcell_lamp5_serpinf1 <- mix_cells("Lamp5", "Serpinf1")
+mixcell_lamp5_sncg <- mix_cells("Lamp5", "Sncg")
+mixcell_lamp5_sst <- mix_cells("Lamp5", "Sst")
+mixcell_lamp5_vip <- mix_cells("Lamp5", "Vip")
+
+mixcell_meis2_pvalb <- mix_cells("Meis2", "Pvalb")
+mixcell_meis2_serpinf1 <- mix_cells("Meis2", "Serpinf1")
+mixcell_meis2_sncg <- mix_cells("Meis2", "Sncg")
+mixcell_meis2_sst <- mix_cells("Meis2", "Sst")
+mixcell_meis2_vip <- mix_cells("Meis2", "Vip")
+
+mixcell_pvalb_serpinf1 <- mix_cells("Pvalb", "Serpinf1")
+mixcell_pvalb_sncg <- mix_cells("Pvalb", "Sncg")
+mixcell_pvalb_sst <- mix_cells("Pvalb", "Sst")
+mixcell_pvalb_vip <- mix_cells("Pvalb", "Vip")
+
+mixcell_serpinf1_sncg <- mix_cells("Serpinf1", "Sncg")
+mixcell_serpinf1_sst <- mix_cells("Serpinf1", "Sst")
+mixcell_serpinf1_vip <- mix_cells("Serpinf1", "Vip")
+
+mixcell_sncg_sst <- mix_cells("Sncg", "Sst")
+mixcell_sncg_vip <- mix_cells("Sncg", "Vip")
+
+mixcell_sst_vip <- mix_cells("Sst", "Vip")
+
+
+
+
+```
+
+
+
+```{r}
+mix_data <- as.data.frame(rbind(mixcell_lamp5_meis2, mixcell_lamp5_pvalb, mixcell_lamp5_serpinf1, mixcell_lamp5_sncg, mixcell_lamp5_sst, mixcell_lamp5_vip,
+                  mixcell_meis2_pvalb, mixcell_meis2_serpinf1, mixcell_meis2_sncg, mixcell_meis2_sst, mixcell_meis2_vip,
+                  mixcell_pvalb_serpinf1, mixcell_pvalb_sncg, mixcell_pvalb_sst, mixcell_pvalb_vip,
+                  mixcell_serpinf1_sncg, mixcell_serpinf1_sst, mixcell_serpinf1_vip,
+                  mixcell_sncg_sst, mixcell_sncg_vip,
+                  mixcell_sst_vip))
+
+write.csv(mix_data, "1213_mix_data.csv")
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

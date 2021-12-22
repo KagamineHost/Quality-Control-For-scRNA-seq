@@ -1,0 +1,102 @@
+---
+title: "1212_patchseq_seurat_yagi"
+author: "Yagi"
+date: "2021/12/12"
+output: html_document
+---
+
+```{r}
+rm(list = ls())
+
+```
+
+```{r}
+library(dplyr)
+library(Seurat)
+library(ggplot2)
+```
+
+```{r}
+patch_exon <- read.csv("20200513_Mouse_PatchSeq_Release_exon.v2.csv")
+rownames(patch_exon) <- patch_exon[,1]
+patch_exon <- patch_exon[,-1]
+
+feature_load <- read.csv("pca_featureloadings.csv", sep = " ")
+cell_embed <- read.csv("pca_cellembeddings.csv", sep = " ")
+
+```
+
+```{r}
+features <- as.data.frame(rownames(feature_load))
+colnames(features) <- 'Feature_name'
+rownames(features) <- features[,1]
+
+```
+
+```{r}
+patch_seurat <- CreateSeuratObject(counts = patch_exon, project = "Patchseq_exon", min.cells = 3, min.features = 200)
+
+patch_seurat[["percent.mt"]] <- PercentageFeatureSet(patch_seurat, pattern = "^MT-")
+
+
+```
+
+```{r}
+# logCPM normalization
+patch_seurat <- NormalizeData(patch_seurat, normalization.method = "LogNormalize", scale.factor = 1e6)
+
+
+```
+
+
+
+
+
+```{r}
+# check that all High Various Genes from 2018 are in 2020's count matrix
+# xx <- merge(features, patch_exon, by = "row.names", all.x = T)
+# check if there is any NA
+# sum(is.na(xx))
+
+```
+
+```{r}
+hvgs_2018 <- rownames(feature_load)
+patch_seurat@assays[["RNA"]]@var.features <- hvgs_2018
+
+patch_seurat <- ScaleData(patch_seurat, features = hvgs_2018)
+
+
+```
+
+
+```{r}
+patch_scale <- patch_seurat@assays$RNA@scale.data
+# View(patch_scale)
+
+# reorder the feature_load so that patch_scale's genename order matchs feature_loading for later matrix multiplication
+featureloading <- feature_load
+featureloading$features <- rownames(featureloading)
+featureloading <- featureloading[order(featureloading$features),]
+featureloading <- featureloading[,-101] # delet the extra column which is added for ordering
+
+
+```
+
+
+```{r}
+t_patch_scale <- t(patch_scale)
+
+featureloading <- as.matrix(featureloading)
+patch_cell_embed <- t_patch_scale %*% featureloading
+
+write.csv(patch_cell_embed, "1213_patchseq_cellembeddings.csv")
+
+```
+
+
+
+```{r}
+pred_2020labels <- read.csv("2020labels.csv", sep = ",", header = F)
+
+```
